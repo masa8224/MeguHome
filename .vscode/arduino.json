@@ -2,5 +2,5 @@
     "board": "arduino:avr:mega",
     "configuration": "cpu=atmega2560",
     "port": "COM7",
-    "sketch": "ETH_Client\\ETH_Client.ino"
+    "sketch": "Arduino\\ETH_Client\\ETH_Client.ino"
 }
