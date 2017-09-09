@@ -1,0 +1,20 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+<body>
+	<button id="on">On</button>
+	Hello, World
+<script>
+	$(document).ready(function(){
+    		$("#on").mousedown(function(){
+        		$.post("UDP_on.php",{data: "Oon"});
+    		});
+		$("#on").mouseup(function(){
+        		$.post("UDP_on.php",{data: "Ooff"});
+    		});
+
+	});
+</script>
+</body>
+</html>
