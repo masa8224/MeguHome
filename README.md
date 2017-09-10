@@ -16,3 +16,10 @@ Some push button
 LEDs
 
 Arduino Mega 2560 + Ethernet Shield or Arduino Uno + Ethernet Shield (Optional)
+
+# Setup
+install PiAUISuites on Raspberry Pi
+
+Setup voicecommand (voicecommand -e)
+
+flowchart coming soon...
