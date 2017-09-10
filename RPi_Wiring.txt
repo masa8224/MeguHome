@@ -1,0 +1,3 @@
+GPIO 4 - Ready LEDs
+GPIO 17 - Push button
+GPIO 18 - command LEDs (flashing when command is invalid)
