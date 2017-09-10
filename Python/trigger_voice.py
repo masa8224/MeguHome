@@ -2,10 +2,12 @@ import RPi.GPIO as GPIO
 import subprocess
 import time
 import pygame
+import webbrowser
 file_ryoukai = 'sound/ryoukai.mp3'
 file_hai = 'sound/hai.mp3'
 file_cmdinvalid = 'sound/invalidcmd.mp3'
 file_init = 'sound/init.mp3'
+file_wakatta = 'sound/wakatta.mp3'
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4, GPIO.OUT)
@@ -45,9 +47,16 @@ while True:
             playsound(file_cmdinvalid)
             blinkled(18,2,0.25)
         else:
-            print line.rstrip()            
+            cmd = line.rstrip()
+            print cmd       
+            if "Google" in cmd:                
+                query = cmd[7:]
+                webbrowser.open('https://www.google.com/search?q='+query.replace(" ","+"))
+                playsound(file_wakatta)
+                break
             playsound(file_ryoukai)
             blinkled(18,1,1)
+            break
       else:
         break
     GPIO.output(4,GPIO.LOW) 
