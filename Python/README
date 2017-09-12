@@ -1,0 +1,60 @@
+Usage:
+
+- Stick MakeSpeechProject.py, SpeakPython (whole folder), SpeakPythonMakeDB.py inside of the project where your main python application rests.
+
+- run 'python MakeSpeechProject.py [appName] [sps file name]' to make your speech application database. An example is 'python MakeSpeechProject.py calc calc.sps' for the calculator app. Theoretically a folder can be used in place of calc.sps (untested).
+
+- add the following lines to your imports:
+
+from SpeakPython.SpeakPython import SpeakPython
+from SpeakPython.Result import Result
+
+- follow this usage pattern when using the module (look at examples for more info located in SpeakPython/examples/):
+
+####################################
+#for purely text-based applications#
+####################################
+sp = SpeakPython("[appName].db");
+r = sp.matchResult(input);
+
+if r == None:
+	#couldn't match anything
+else:
+	rStr = r.getResult();
+
+	#now do something with the resulting output string such as:
+
+	#direct execution
+	exec rStr;
+
+	#simple output
+	print rStr;
+
+	#system control commands
+	#(see SpeakPython/examples/LinuxCommands/)
+
+	#parsing output for execution/post-processing
+	#(depends on parse
+
+#####################################
+#for speech recognition applications#
+#####################################
+#taken from the HouseCommands example
+
+from SpeakPython.SpeakPythonRecognizer import SpeakPythonRecognizer
+
+#define callback function with 1 parameter (string)
+def execute(s):
+        print s;
+        #exec s;
+
+#the second argument will utilize files
+#in this case houseCommands.fsg should be found next to this .py source file
+recog = SpeakPythonRecognizer(execute, "houseCommands");
+
+#sets the level of debug output
+#1 is the most output, 10 is the least
+recog.setDebug(1);
+
+#call this to start the recognition thread and start recognizing speech
+recog.recognize();

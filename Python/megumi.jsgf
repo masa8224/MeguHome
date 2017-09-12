@@ -1,0 +1,12 @@
+#JSGF V1.0;
+grammar megumi;
+public <topRule> = <rule0> | <rule1>;
+
+<megumi_me> = (i);
+<megumi_light> = (front) | (back);
+<megumi_turn> = (turn);
+<megumi_onOff> = (on) | (off);
+<megumi_home> = (home | out);
+
+<rule0> = <megumi_turn> [the] <megumi_light> [light] [to] <megumi_onOff>;
+<rule1> = <megumi_me> [am] <megumi_home>;

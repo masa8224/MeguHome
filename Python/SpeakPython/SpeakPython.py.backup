@@ -1,0 +1,334 @@
+#SpeakPython allows developers to add speech recognition support to their Python applications
+#Copyright (C) 2015  Eric Matthews
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by 
+#the Free Software Foundation, either version 3 of the License, or 
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of 
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import re
+import pickle
+import sqlite3
+
+import sys
+import os.path
+
+from Result import Result
+
+class SpeakPython(object):
+
+	db = '';
+	visitedFunctionPaths = [];
+	visitedFunctionPathsWithNum = [];
+	currentFunctionPath = [];
+	currentFunctionPathWithNum = [];
+	recordedVars = {};
+
+	DEBUG_VAL = 3;
+
+	def __init__(self, database, DEBUG=3):
+		self.db = database;
+		self.DEBUG_VAL = 3;
+		self.DEBUG_VAL = DEBUG;
+
+		if not os.path.isfile(self.db):
+			self.debugMsg(self.db + " does not exist.", 10);
+
+	def debugMsg(self, msg, severity):
+		if self.DEBUG_VAL <= severity:
+                    print "DEBUG(" + str(severity) + "): SpeakPython.py: " + str(msg) + "\n";
+
+	#returns the best-matched result out of the labels of matched regexes
+	def getBestResult(self, results, varDict):
+
+		#for each result, find the first result that is covered by the variable dictionary (since results are sorted from longest set of labels to smallest)
+		for result in results:
+			if result.isCoveredBy(varDict):
+				result.setVariables(varDict);
+				return result;
+
+		return None;
+
+	def getExpandedNums(self, prefix, g, matchGroupDict):
+		#check numbered groups
+		m = re.match(prefix + r'g_([0-9]+)', g);
+		if m != None:
+			newG = m.group(1);
+			self.recordedVars[prefix + newG] = matchGroupDict[g];
+			return True;
+
+		return False;
+
+	def getExpandedFunctions(self, prefix, cursor, g, matchGroupDict, kGroupRegexes):
+		#check function groups
+		#find functions of the form "_{name}_{num}" and simplify them for the result lists
+		m = re.match(prefix + r'_([a-zA-Z]+)_([0-9]+)_(.*)', g);
+		if m != None:
+			funcName = m.group(1);
+			funcNum = m.group(2);
+
+			#join new function path to the path variable
+			pathName = '_'.join(self.currentFunctionPath);
+			if len(self.currentFunctionPath) > 0:
+				pathName += '_';
+			self.currentFunctionPath.append( funcName );
+
+			#add variable of function names with numbers to path
+			self.currentFunctionPathWithNum.append( funcName + '_' + funcNum );
+
+			#get result of function
+			functionResult = self.getResultForFunction(prefix, cursor, g, funcName, funcNum, matchGroupDict, kGroupRegexes);
+
+			#create varName string and see if we've visited it before (a previous value for this function was already calculated)		
+			varName = '_'.join(self.currentFunctionPath);	
+			if not (varName in self.visitedFunctionPaths):
+				self.recordedVars[varName] = functionResult; 
+				self.visitedFunctionPaths.append( varName );
+
+			#see if we've visited this *number* path, and if not, add the function result as a variable
+			varName = '_'.join(self.currentFunctionPathWithNum);	
+			if not (varName in self.visitedFunctionPathsWithNum):
+				self.recordedVars[varName] = functionResult; 
+				self.visitedFunctionPathsWithNum.append( varName );
+
+			#remove last function from the path (popping back off the stack of functions)
+			self.currentFunctionPath.pop();
+			self.currentFunctionPathWithNum.pop();
+
+			#return so as not to record function as variable
+			return True;
+
+		return False;
+
+	def getExpandedVars(self, prefix, g, matchGroupDict):
+		#if no other group matches, it is a non-function variable
+		m = re.match('[a-zA-Z0-9]+', g);
+		if m != None:
+			self.recordedVars[g] = matchGroupDict[g];
+
+			return True;
+
+		return False;
+
+	def getExpandedKleene(self, prefix, g, cursor, matchGroupDict, kGroupRegexes):
+		#see if it is a kleene variable
+		m = re.match(r'k_([0-9]+)', g);
+		if m != None:
+			rawMatchStr = matchGroupDict[g];
+			kNum = m.group(1);
+		
+			#find the regex inside that was used to get the rawMatchStr
+			innerRegex = kGroupRegexes[kNum];
+
+			#use the inner regex multiple times to retrieve a list of results used for each variable
+			retDict = {};
+			if innerRegex != None:
+
+				origInnerRegex = innerRegex;
+
+				delim = " /,";
+
+				#alter innerRegex to match spaces so as to get rid of them in next iteration
+				innerRegex = origInnerRegex + "[" + delim + "]*";
+
+				#search for the regex multiple times within the string
+				#shorten the string each iteration by what was previously matched
+				kMatch = re.match(innerRegex, rawMatchStr);
+				while (kMatch != None):
+					innerVars	= kMatch.groupdict();
+
+					#delim matches what was matched before
+					innerMatchStr = kMatch.group(0);
+
+					#push recorded vars to the stack
+					tmp = self.recordedVars;
+					self.recordedVars = {};
+
+					#for each variable of the inner regex, expand it to its proper form (functions turn into function results, kleene are recursed, etc)
+					for var in innerVars:
+						self.getExpandedForm(prefix, cursor, var, innerVars, kGroupRegexes);
+						expandedDict = self.recordedVars; 
+						if var in retDict:
+							retDict[var].append( expandedDict[var] );
+						else:
+							retDict[var] = [ expandedDict[var] ];
+
+					#pop the recorded vars back to old state
+					self.recordedVars = tmp;
+
+					#record all of the result dictionary in the k_{num} index
+					self.recordedVars[g] = retDict;
+
+					#cut off previous match from string, and re-search the regex
+					rawMatchStr = rawMatchStr[len(innerMatchStr):];
+					kMatch = re.match(innerRegex, rawMatchStr);
+	
+			return True;
+
+		return False;
+
+	def getExpandedForm(self, prefix, cursor, g, matchGroupDict, kGroupRegexes):
+
+                #remove all None or empty regex group matches
+		val = matchGroupDict[g];
+		if val == '' or val == None:
+			return;
+
+                #expand 
+		if self.getExpandedNums(prefix, g, matchGroupDict):
+			return;
+
+		if self.getExpandedKleene(prefix, g, cursor, matchGroupDict, kGroupRegexes):
+			return;
+
+		if self.getExpandedFunctions(prefix, cursor, g, matchGroupDict, kGroupRegexes):
+			return;
+
+		#if no other, the key is a variable
+		if self.getExpandedVars(prefix, g, matchGroupDict):
+			return;
+
+		return;
+
+	def getResultForFunction(self, prevPrefix, cursor, g, funcName, num, groupDict, kGroupRegexes):
+		funcVarDict = {}
+
+		#for each matched group, find function-instance-specific variables
+		prefix = '_' + funcName + '_' + num + '_';
+	
+		#for each key in matchGroup that matches the current function	
+		funcRegex = prevPrefix + '_' + funcName + '_' + num + '_(.+)';
+		for key in groupDict:
+
+			m = re.match(funcRegex, key);
+			if m != None:
+
+				#push retrieved vars to stack
+				tmpDict = self.recordedVars; #push recordedVars to stack	
+				self.recordedVars = {}; #clear recordedVars
+
+				#get the expanded form of the variable (if it is another function, this will recurse to this function to find the result of that function)
+				prefix = prevPrefix + prefix; #use a new prefix
+				self.getExpandedForm(prefix, cursor, key, groupDict, kGroupRegexes);
+
+				#if there aren't any recorded variables, pop recorded variables and continue
+				if len(self.recordedVars) == 0:
+						self.recordedVars = tmpDict;
+						continue;
+
+				funcVarDict = {};
+
+				#generate function path string, which is a regex to remove the function path prefix from returned variables (in order to get localized variables names)
+				#eg) _funcName_2_0 becomes 0, which is then used to compute the result of funcName 
+				pathString = '';
+				for link in self.currentFunctionPath:
+						pathString += "_" + link + '_(?:[0-9]+_)?';
+				pathStringRegex = pathString + '(.+)';
+
+				#remove prefix of function path from all variable names
+				for key in self.recordedVars:
+						k = re.sub(pathStringRegex, r'\g<1>', key);
+						funcVarDict[k] = self.recordedVars[key];
+
+				#pop variables back to how they used to be
+				self.recordedVars = tmpDict;
+
+		#load results from db by function name
+		funcResults = cursor.execute("SELECT results FROM functions WHERE name=?", [funcName]);
+		funcResults = pickle.loads(cursor.fetchone()[0]);
+
+		#find the result based on the function's result coverage (just like a match) default to raw regex match
+		resultStr = groupDict[g];
+
+		#get the function result that best matches the labels
+		result = self.getBestResult(funcResults, funcVarDict);
+
+		if result != None:
+			resultStr = result.getResult();
+
+		return resultStr;
+
+	def init(self):
+		self.visitedFunctionPaths = [];
+		self.visitedFunctionPathsWithNum = [];
+		self.currentFunctionPath = [];
+		self.currentFunctionPathWithNum = [];
+		self.recordedVars = {};
+
+	#returns a result that matches the regex
+	def matchResult(self, inStr):
+		self.init();
+
+		conn = sqlite3.connect(self.db);
+		c = conn.cursor();
+
+		keyword = inStr[:inStr.find(' ')];
+		keyword = keyword.lower();
+
+		matches = c.execute("SELECT order_id, regex, results FROM matches WHERE keywords LIKE '%'||?||'%' OR keywords LIKE '%*%' ORDER BY order_id", [keyword]);
+
+		longestResult = None;
+		longestResultLen = 0;
+
+		#for each match, find the match result that covers the most labels of all match regexes that the input fits
+		for match in matches:
+			matchID = match[0];
+			regex = match[1];
+
+			#match regex and get capture groups
+			m = re.match(regex, inStr);
+		
+			#regex doesn't match, stop	
+			if m == None:
+				continue;
+
+			#load the kleene groups from (list of regexes) from database for this particular match
+			kGroupRegexes = '';
+
+			c.execute("SELECT regexes FROM kleene WHERE id=?", [(matchID)])
+			kMatch = c.fetchone();
+			if kMatch != None:
+				kGroupRegexes = pickle.loads(kMatch[0]);
+			else:
+				kGroupRegexes = {};
+
+			#regex matches, get groups
+			self.debugMsg(regex, 1);
+
+			matchGroupDict = m.groupdict();
+			groupDict = {};
+
+#			self.debugMsg("raw matches: " + matchGroupDict, 1);
+
+			#get the expanded form of a variable/function for use as a result label
+			for g in matchGroupDict:
+				self.getExpandedForm('', c, g, matchGroupDict, kGroupRegexes);
+
+			#print found variables for debugging purposes
+			self.debugMsg(self.recordedVars, 1);
+
+			results = match[2]; #load pickled results from db
+			results = pickle.loads(results); #unpickle them
+
+			#for each result, see if match covers the label, find the match-result pair that covers the most labels
+			bestResult = self.getBestResult(results, self.recordedVars);
+			if bestResult != None:
+				if longestResultLen < len(bestResult.labels):
+					longestResult = bestResult;
+					longestResultLen = len(bestResult.labels);
+
+                        #output recorded variables for developer's use
+                        self.debugMsg("variables: " + str(self.recordedVars), 3);
+
+			#refresh variables so that result is not altered, does this make sense?
+			self.recordedVars = {};
+
+		return longestResult;

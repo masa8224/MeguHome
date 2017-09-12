@@ -6,6 +6,7 @@ import webbrowser
 file_ryoukai = 'sound/ryoukai.mp3'
 file_hai = 'sound/hai.mp3'
 file_cmdinvalid = 'sound/invalidcmd.mp3'
+file_konni = 'sound/konnichiwa.mp3'
 file_init = 'sound/init.mp3'
 file_wakatta = 'sound/wakatta.mp3'
 GPIO.setwarnings(False)
@@ -30,6 +31,7 @@ def blinkled(pin,n,delay):
             time.sleep(delay)
         x = x+1
 playsound(file_init)
+print "Ready!"
 while True:
     while not GPIO.input(17):
         time.sleep(0.01)
