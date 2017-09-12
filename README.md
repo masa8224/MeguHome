@@ -1,16 +1,16 @@
 # MeguHome
 It's just home automation system 
 
-but with Megumi sound!
+but with Megumi voice!
 
 # Hardware Requirements
 Raspberry Pi 3 
 
-Microphone 
+Microphone or Webcam with built-in Microphone
 
-USB Sound Card 
+USB Sound Card (for stand-alone Microphone)
 
-Some push button 
+Some push button (to use "push to talk" mode (not in code yet))
 
 LEDs
 
@@ -20,5 +20,7 @@ Arduino Mega 2560 + Ethernet Shield or Arduino Uno + Ethernet Shield (Optional)
 install SpeakPython (voice recognition)
 
 install pygame (play sound!)
+
+install PiAUISuites voicecommand (for custom voice input)
 
 flowchart coming soon...
