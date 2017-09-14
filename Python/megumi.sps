@@ -3,7 +3,7 @@
 	0 {'front'}
 	1 {'back'}
 @
-#home() = (home | out);
+#home() = (home | going);
 
 #onOff() = [on] | [off];
 @results
@@ -15,11 +15,20 @@
 
 #turn (the)? #light (light)? (to)? #onOff;
 @results
-	#light, #onOff {#onOff ' ' #light}
+	#light, #onOff {#onOff'("'#light'")'}
 @
 
 #me (am)? #home;
 @results
-	#home {'I am ' #home}
+	0 {'Iam("'#home'")'}
 @
+[quit | stop | exit];
+@results
+	0 {'quit()'}
+@
+[search | custom];
+@results
+	0 {'print "search"'}
+@
+
 
