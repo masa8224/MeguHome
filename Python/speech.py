@@ -15,8 +15,8 @@ VOICE_OKAERI = 'sound/okaeri.mp3'
 VOICE_JAA_NE = 'sound/jaane.mp3'
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(18, GPIO.IN)
-GPIO.setup(17, GPIO.OUT)
+GPIO.setup(18, GPIO.IN) #Status LED
+GPIO.setup(17, GPIO.OUT) #Test push button. pls ignore
 pygame.init()
 pygame.mixer.init()
 STOP = False
@@ -84,8 +84,6 @@ print "ready!"
 #RECOG.setDebug(1)
 try:
     while not STOP:
-        if GPIO.input(18):
-            print "button pushed!"
         RECOG.recognize()
 except KeyboardInterrupt:
     STOP = True
