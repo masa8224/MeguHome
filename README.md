@@ -17,10 +17,10 @@ LEDs
 Arduino Mega 2560 + Ethernet Shield or Arduino Uno + Ethernet Shield (Optional)
 
 # Setup
-install SpeakPython (voice recognition)
+install SpeakPython and all its require module (voice recognition)
 
 install pygame (play sound!)
 
-install PiAUISuites voicecommand (for custom voice input)
+install PiAUISuites voicecommand (for custom voice input, Optional) 
 
 flowchart coming soon...
