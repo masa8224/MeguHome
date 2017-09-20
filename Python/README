@@ -4,7 +4,7 @@ speech.py is the main file for Megumi. excute this file.
 
 udp.py use for sending UDP Packet to Arduino (Turn the lights on!).
 
-megumi.sps is Speech Phrase Specification file you can add more pharse there. After you done adding more pharse. Run "python MakeSpeechProject.py megumi megumi.sps"
+megumi.sps is Speech Phrase Specification file you can add more pharse there. After you done adding more pharse. Run "$ python MakeSpeechProject.py megumi megumi.sps"
 
 more info about .sps file: https://bitbucket.org/matthew3/speakpython/wiki/The%20SPS%20File%20Format
 
