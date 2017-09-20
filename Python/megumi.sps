@@ -4,7 +4,9 @@
 	1 {'back'}
 @
 #home() = (home | going);
-
+#hours() = (one | two | three | four | five | six | seven | eight | nine | ten | eleven | twelve);
+#ampm() = (am | pm);
+#days() = (today | tomorrow);
 #onOff() = [on] | [off];
 @results
 	0 {'on'}
@@ -13,22 +15,39 @@
 #me() = (i);
 #turn() = (turn);
 
-#turn (the)? #light (light)? (to)? #onOff;
+[megumi] #turn (the)? #light (light)? (to)? #onOff;
 @results
 	#light, #onOff {#onOff'("'#light'")'}
 @
-
-#me (am)? #home;
+[megumi] #turn #onOff (the)? #light (light)?;
+@results
+	#light, #onOff {#onOff'("'#light'")'}
+@
+[megumi] (set alarm)* (at)? #hours #ampm #days;
+@results
+	#hours, #ampm, #days {'print "'#hours','#ampm','#days'"'}
+@
+[megumi] #me (am)? #home;
 @results
 	0 {'Iam("'#home'")'}
 @
-[quit | stop | exit];
+[megumi] [quit | stop | exit];
 @results
 	0 {'quit()'}
 @
-[search | custom];
+[megumi] [search | custom];
 @results
 	0 {'print "search"'}
 @
-
-
+[deactivate voice recongintion];
+@results
+	0 {'ignore(True)'}
+@
+[activate voice recongintion];
+@results
+	0 {'ignore(False)'}
+@
+[megumi];
+@results
+	0 {'print "Hai!"'}
+@

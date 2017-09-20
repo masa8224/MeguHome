@@ -1,14 +1,22 @@
 #JSGF V1.0;
 grammar megumi;
-public <topRule> = <rule0> | <rule1> | <rule2> | <rule3>;
+public <topRule> = <rule0> | <rule1> | <rule2> | <rule3> | <rule4> | <rule5> | <rule6> | <rule7> | <rule8>;
 
 <megumi_me> = (i);
+<megumi_ampm> = (am | pm);
 <megumi_light> = (front) | (back);
+<megumi_days> = (today | tomorrow);
+<megumi_hours> = (one | two | three | four | five | six | seven | eight | nine | ten | eleven | twelve);
 <megumi_turn> = (turn);
-<megumi_onOff> = (on) | (off);
 <megumi_home> = (home | going);
+<megumi_onOff> = (on) | (off);
 
-<rule0> = <megumi_turn> [the] <megumi_light> [light] [to] <megumi_onOff>;
-<rule1> = <megumi_me> [am] <megumi_home>;
-<rule2> = (quit | stop | exit);
-<rule3> = (search | custom);
+<rule0> = (megumi) <megumi_turn> [the] <megumi_light> [light] [to] <megumi_onOff>;
+<rule1> = (megumi) <megumi_turn> <megumi_onOff> [the] <megumi_light> [light];
+<rule2> = (megumi) (set alarm)* [at] <megumi_hours> <megumi_ampm> <megumi_days>;
+<rule3> = (megumi) <megumi_me> [am] <megumi_home>;
+<rule4> = (megumi) (quit | stop | exit);
+<rule5> = (megumi) (search | custom);
+<rule6> = (deactivate voice recongintion);
+<rule7> = (activate voice recongintion);
+<rule8> = (megumi);

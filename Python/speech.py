@@ -1,9 +1,9 @@
-from SpeakPython.SpeakPythonRecognizer import SpeakPythonRecognizer
-import RPi.GPIO as GPIO
-import pygame
-import udp
 import time
 import sys
+import pygame
+import udp
+import RPi.GPIO as GPIO
+from SpeakPython.SpeakPythonRecognizer import SpeakPythonRecognizer
 VOICE_RYOUKAI = 'sound/ryoukai.mp3'
 VOICE_HAI = 'sound/hai.mp3'
 VOICE_CMDINVALID = 'sound/invalidcmd.mp3'
@@ -15,14 +15,15 @@ VOICE_OKAERI = 'sound/okaeri.mp3'
 VOICE_JAA_NE = 'sound/jaane.mp3'
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(4, GPIO.OUT)
-GPIO.setup(17, GPIO.IN)
-GPIO.setup(18, GPIO.OUT)
+GPIO.setup(18, GPIO.IN)
+GPIO.setup(17, GPIO.OUT)
 pygame.init()
 pygame.mixer.init()
 STOP = False
+ACTIVE = True
 
 def playsound(file_voice):
+    """play sound!"""
     pygame.mixer.music.load(file_voice)
     pygame.mixer.music.play()
     while pygame.mixer.music.get_busy():
@@ -30,6 +31,7 @@ def playsound(file_voice):
 
 
 def blinkled(pin, n, delay):
+    """Blinking the LEDs"""
     x = 0
     while x < n:
         GPIO.output(pin, GPIO.HIGH)
@@ -39,32 +41,51 @@ def blinkled(pin, n, delay):
             time.sleep(delay)
         x = x + 1
 
-
 def execute(input_str):
-    print input_str
-    blinkled(4, 2, 0.25)
+    """Excute the commands!"""
+    #print input_str
+    blinkled(17, 2, 0.25)
     exec input_str
+def ignore(status):
+    """Ignoring the voice commands!"""
+    global ACTIVE
+    if status is True:
+        ACTIVE = False
+        print "deactivate"
+        print ACTIVE 
+    if status is False:
+        ACTIVE = True
+        print "activate"
 def on(light):
-    udp.main("on")
+    if ACTIVE is True:        
+        playsound(VOICE_WAKATTA)
+        udp.main("on")
 def off(light):
-    udp.main("off")
+    print ACTIVE
+    if ACTIVE is True:        
+        playsound(VOICE_WAKATTA)
+        udp.main("off")
 def Iam(home):
-    if home == "home":
-        playsound(VOICE_OKAERI)
-    if home == "going":
-        playsound(VOICE_ITERASHAI)
+    if ACTIVE is True:        
+        if home == "home":
+            playsound(VOICE_OKAERI)
+        if home == "going":
+            playsound(VOICE_ITERASHAI)
 def quit():
-    STOP = True
-    playsound(VOICE_JAA_NE)
-    sys.exit()
+    global STOP
+    if ACTIVE is True:        
+        STOP = True
+        playsound(VOICE_JAA_NE)
+        sys.exit()
 
 playsound(VOICE_INIT)
-
 RECOG = SpeakPythonRecognizer(execute, "megumi")
 print "ready!"
-
+#RECOG.setDebug(1)
 try:
     while not STOP:
+        if GPIO.input(18):
+            print "button pushed!"
         RECOG.recognize()
 except KeyboardInterrupt:
     STOP = True
